@@ -763,3 +763,6 @@ body::before {
 
   .feature-bar { max-width: calc(100% - 120px); }
 }
+
+/* Grace period dot — amber */
+.hand-dot.grace { background: #f59e0b; box-shadow: 0 0 8px #f59e0b; }
