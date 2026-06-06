@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Neuster Particles</title>
+  <link rel="stylesheet" href="style.css"/>
+
+  <!-- Three.js -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+  <!-- MediaPipe Hands -->
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
+</head>
+<body>
+
+  <!-- ═══════════════════════════════════════════
+       GLOBAL NAV
+  ═══════════════════════════════════════════ -->
+  <nav id="global-nav">
+    <div class="nav-logo">
+      <span class="logo-n">N</span>euster <span class="logo-accent">Particles</span>
+    </div>
+    <div class="nav-links">
+      <button class="nav-btn active" data-page="1">
+        <span class="nav-icon">✦</span> Visualiser
+      </button>
+      <button class="nav-btn" data-page="2">
+        <span class="nav-icon">◈</span> Builder
+      </button>
+      <button class="nav-btn" data-page="3">
+        <span class="nav-icon">◉</span> Air Canvas
+      </button>
+    </div>
+    <div class="nav-status">
+      <div id="nav-hand-dot" class="hand-dot inactive"></div>
+      <span id="nav-hand-label">No hand</span>
+    </div>
+  </nav>
+
+  <!-- ═══════════════════════════════════════════
+       PAGE 1 — PARTICLE VISUALISER
+  ═══════════════════════════════════════════ -->
+  <div id="page-1" class="page active">
+
+    <!-- Top-centre feature bar -->
+    <div class="feature-bar" id="p1-feature-bar">
+      <button class="feat-btn" id="btn-rainbow" title="Rainbow mode">
+        <span>Rainbow</span>
+        <div class="toggle-pill" id="toggle-rainbow"></div>
+      </button>
+      <button class="feat-btn" id="btn-morph" title="Morph between shapes">
+        <span>Morph</span>
+        <div class="toggle-pill active" id="toggle-morph"></div>
+      </button>
+      <button class="feat-btn" id="btn-mirror" title="Mirror mode">
+        <span>Mirror</span>
+        <div class="toggle-pill" id="toggle-mirror"></div>
+      </button>
+    </div>
+
+    <!-- Top-right controls -->
+    <div class="top-right-controls" id="p1-top-right">
+      <button class="ctrl-btn" id="btn-audio" title="Audio reactivity">
+        <span class="ctrl-icon">♫</span> Audio
+        <div class="toggle-pill" id="toggle-audio"></div>
+      </button>
+      <button class="ctrl-btn" id="btn-export-p1" title="Export STL">
+        <span class="ctrl-icon">↓</span> Export
+      </button>
+      <button class="ctrl-btn" id="btn-record-p1" title="Record 10s clip">
+        <span class="ctrl-icon">⏺</span> Record
+      </button>
+    </div>
+
+    <!-- Left panel: shape library -->
+    <div class="side-panel" id="shape-panel">
+      <div class="panel-title">Shape Library</div>
+      <div class="shape-grid" id="shape-grid">
+        <!-- Populated by page1.js -->
+      </div>
+      <div class="panel-divider"></div>
+      <div class="panel-title">Particle</div>
+      <div class="control-row">
+        <label>Color</label>
+        <input type="color" id="particle-color" value="#39db87"/>
+      </div>
+      <div class="control-row">
+        <label>Size</label>
+        <input type="range" id="particle-size" min="0.5" max="5" step="0.1" value="1.5"/>
+      </div>
+      <div class="control-row">
+        <label>Count</label>
+        <input type="range" id="particle-count" min="1000" max="15000" step="500" value="5000"/>
+      </div>
+    </div>
+
+    <!-- 3D Canvas -->
+    <canvas id="canvas-p1"></canvas>
+
+    <!-- Telemetry overlay -->
+    <div class="telemetry" id="telemetry-p1">
+      <div class="tele-row">
+        <span class="tele-label">Gesture</span>
+        <span class="tele-val" id="tele-gesture">—</span>
+      </div>
+      <div class="tele-row">
+        <span class="tele-label">Scale</span>
+        <span class="tele-val" id="tele-scale">1.00×</span>
+      </div>
+      <div class="tele-msg" id="tele-msg">Show your hand to begin</div>
+    </div>
+
+    <!-- Webcam PIP -->
+    <div class="pip-container" id="pip-p1">
+      <video id="video-p1" playsinline></video>
+      <canvas id="pip-canvas-p1"></canvas>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════
+       PAGE 2 — 3D BUILDER
+  ═══════════════════════════════════════════ -->
+  <div id="page-2" class="page">
+
+    <!-- Top-centre nav bar -->
+    <div class="feature-bar" id="p2-feature-bar">
+      <button class="feat-btn" id="btn-mirror-p2">
+        <span>Mirror</span>
+        <div class="toggle-pill" id="toggle-mirror-p2"></div>
+      </button>
+      <button class="feat-btn" id="btn-paint-p2">
+        <span>Paint</span>
+        <div class="toggle-pill" id="toggle-paint-p2"></div>
+      </button>
+    </div>
+
+    <!-- Top-right -->
+    <div class="top-right-controls" id="p2-top-right">
+      <button class="ctrl-btn" id="btn-export-p2">
+        <span class="ctrl-icon">↓</span> Export STL
+      </button>
+      <button class="ctrl-btn" id="btn-record-p2">
+        <span class="ctrl-icon">⏺</span> Record
+      </button>
+      <button class="ctrl-btn" id="btn-clear-p2">
+        <span class="ctrl-icon">✕</span> Clear
+      </button>
+    </div>
+
+    <!-- 3D Builder canvas -->
+    <canvas id="canvas-p2"></canvas>
+
+    <!-- Object palette (summoned by Gojo sign) -->
+    <div class="object-palette hidden" id="object-palette">
+      <div class="palette-title">Object Palette</div>
+      <div class="palette-grid" id="palette-grid">
+        <!-- Populated by page2.js -->
+      </div>
+    </div>
+
+    <!-- Gesture reference panel -->
+    <div class="gesture-ref" id="gesture-ref-p2">
+      <div class="panel-title">Gestures</div>
+      <div class="gesture-item">🤏🤏 Both pinch + extend → rope</div>
+      <div class="gesture-item">🤏 Pinch object → drag</div>
+      <div class="gesture-item">↔ Hand depth → resize</div>
+      <div class="gesture-item">🥋 Karate chop → slice</div>
+      <div class="gesture-item">🙌🔄 Two hands twist → rotate</div>
+      <div class="gesture-item">🫴 Gojo sign → palette</div>
+      <div class="gesture-item">✂ Scissors → delete</div>
+    </div>
+
+    <!-- Telemetry -->
+    <div class="telemetry" id="telemetry-p2">
+      <div class="tele-row">
+        <span class="tele-label">Gesture</span>
+        <span class="tele-val" id="tele-gesture-p2">—</span>
+      </div>
+      <div class="tele-msg" id="tele-msg-p2">Show your hand to begin</div>
+    </div>
+
+    <!-- Webcam PIP -->
+    <div class="pip-container" id="pip-p2">
+      <video id="video-p2" playsinline></video>
+      <canvas id="pip-canvas-p2"></canvas>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════
+       PAGE 3 — AIR CANVAS
+  ═══════════════════════════════════════════ -->
+  <div id="page-3" class="page">
+
+    <!-- Top-centre controls -->
+    <div class="feature-bar" id="p3-feature-bar">
+      <div class="control-row-inline">
+        <label>Trail</label>
+        <input type="range" id="trail-length" min="10" max="120" value="50"/>
+      </div>
+      <div class="control-row-inline">
+        <label>Glow</label>
+        <input type="range" id="glow-intensity" min="1" max="20" value="8"/>
+      </div>
+      <button class="feat-btn" id="btn-clear-p3">Clear</button>
+    </div>
+
+    <!-- Top-right -->
+    <div class="top-right-controls" id="p3-top-right">
+      <button class="ctrl-btn" id="btn-record-p3">
+        <span class="ctrl-icon">⏺</span> Record
+      </button>
+    </div>
+
+    <!-- Air canvas -->
+    <canvas id="canvas-p3"></canvas>
+
+    <!-- Telemetry -->
+    <div class="telemetry" id="telemetry-p3">
+      <div class="tele-msg" id="tele-msg-p3">Move your fingers to paint</div>
+    </div>
+
+    <!-- Webcam PIP -->
+    <div class="pip-container" id="pip-p3">
+      <video id="video-p3" playsinline></video>
+      <canvas id="pip-canvas-p3"></canvas>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════
+       GESTURE TUTORIAL OVERLAY
+  ═══════════════════════════════════════════ -->
+  <div class="tutorial-overlay hidden" id="tutorial-overlay">
+    <div class="tutorial-card" id="tutorial-card">
+      <button class="tutorial-close" id="tutorial-close">✕</button>
+      <div class="tutorial-content" id="tutorial-content">
+        <!-- Populated by app.js per page -->
+      </div>
+      <div class="tutorial-dots" id="tutorial-dots"></div>
+      <div class="tutorial-nav">
+        <button class="tut-nav-btn" id="tut-prev">← Prev</button>
+        <button class="tut-nav-btn" id="tut-next">Next →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Help button (always visible) -->
+  <button class="help-btn" id="help-btn" title="Gesture tutorial">?</button>
+
+  <!-- Recording indicator -->
+  <div class="rec-indicator hidden" id="rec-indicator">
+    <span class="rec-dot"></span> REC
+  </div>
+
+  <script src="app.js"></script>
+  <script src="page1.js"></script>
+  <script src="page2.js"></script>
+  <script src="page3.js"></script>
+</body>
+</html>

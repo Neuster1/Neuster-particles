@@ -1,0 +1,764 @@
+/* ═══════════════════════════════════════════
+   NEUSTER PARTICLES — style.css
+   Dark glassmorphism + neon accent aesthetic
+═══════════════════════════════════════════ */
+
+@import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400&display=swap');
+
+:root {
+  --bg:        #05050d;
+  --bg2:       #0d0d1a;
+  --glass:     rgba(255,255,255,0.04);
+  --glass-b:   rgba(255,255,255,0.08);
+  --border:    rgba(255,255,255,0.08);
+  --border-hi: rgba(255,255,255,0.18);
+  --accent:    #a855f7;
+  --accent2:   #22d3ee;
+  --accent3:   #39db87;
+  --text:      #e8e6f0;
+  --text-dim:  #6b6880;
+  --danger:    #ff4d6d;
+  --nav-h:     56px;
+  --panel-w:   220px;
+  --pip-w:     180px;
+  --pip-h:     135px;
+  --radius:    12px;
+  --radius-sm: 8px;
+  /* Derived safe zones so every overlay respects the others */
+  --pip-stack-h: calc(var(--pip-h) + 16px + 16px); /* pip height + bottom gap + top gap */
+  --left-safe:   16px;
+  --right-safe:  16px;
+  --bar-top:     14px;
+  --bar-h:       44px; /* approx rendered height of feature-bar / ctrl buttons */
+  --ui-top:      calc(var(--bar-top) + var(--bar-h) + 10px); /* first safe Y below top bars */
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  width: 100%; height: 100%;
+  overflow: hidden;
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Syne', sans-serif;
+  font-size: 14px;
+}
+
+/* ── SCROLLBAR ──────────────────────────── */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border-hi); border-radius: 2px; }
+
+/* ═══════════════════════════════════════════
+   GLOBAL NAV
+═══════════════════════════════════════════ */
+#global-nav {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  height: var(--nav-h);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 24px;
+  background: rgba(5,5,13,0.85);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--border);
+}
+
+.nav-logo {
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.logo-n { color: var(--accent); }
+.logo-accent { color: var(--accent2); }
+
+.nav-links {
+  display: flex;
+  gap: 6px;
+  /* Centre in nav without overlapping logo or status */
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.nav-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 16px;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 40px;
+  color: var(--text-dim);
+  font-family: 'Syne', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+.nav-btn:hover {
+  border-color: var(--border-hi);
+  color: var(--text);
+}
+.nav-btn.active {
+  background: rgba(168,85,247,0.15);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.nav-icon { font-size: 10px; }
+
+.nav-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: 'DM Mono', monospace;
+  font-size: 12px;
+  color: var(--text-dim);
+  flex-shrink: 0;
+  margin-left: auto; /* push to far right even when nav-links is absolute */
+}
+
+.hand-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  transition: background 0.3s;
+}
+.hand-dot.active   { background: var(--accent3); box-shadow: 0 0 8px var(--accent3); }
+.hand-dot.inactive { background: var(--danger); }
+
+/* ═══════════════════════════════════════════
+   PAGES
+═══════════════════════════════════════════ */
+.page {
+  position: fixed;
+  top: var(--nav-h); left: 0; right: 0;
+  bottom: 0;
+  display: none;
+  pointer-events: none;
+}
+.page.active {
+  display: block;
+  pointer-events: all;
+}
+
+/* Main page canvases — full bleed behind all UI */
+#canvas-p1,
+#canvas-p2,
+#canvas-p3 {
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  display: block;
+}
+
+/* Page 3 canvas — pure black bg */
+#canvas-p3 { background: #000; }
+
+/* ═══════════════════════════════════════════
+   FEATURE BAR (top-centre)
+═══════════════════════════════════════════ */
+.feature-bar {
+  position: absolute;
+  top: var(--bar-top);
+  /* Centred but capped so it never runs under the top-right controls.
+     We give 180px clearance on the right for the ctrl buttons. */
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: calc(100% - 220px); /* 110px each side keeps clear of right panel */
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: rgba(13,13,26,0.8);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--border);
+  border-radius: 40px;
+  pointer-events: all;
+  /* Prevent internal content from overflowing */
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.feat-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 12px;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  color: var(--text-dim);
+  font-family: 'Syne', sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+.feat-btn:hover {
+  border-color: var(--border-hi);
+  color: var(--text);
+}
+
+.toggle-pill {
+  width: 28px; height: 14px;
+  background: var(--border-hi);
+  border-radius: 7px;
+  position: relative;
+  transition: background 0.2s;
+  flex-shrink: 0;
+}
+.toggle-pill::after {
+  content: '';
+  position: absolute;
+  top: 2px; left: 2px;
+  width: 10px; height: 10px;
+  background: var(--text-dim);
+  border-radius: 50%;
+  transition: all 0.2s;
+}
+.toggle-pill.active { background: var(--accent); }
+.toggle-pill.active::after {
+  left: 16px;
+  background: #fff;
+}
+
+.control-row-inline {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-dim);
+  font-size: 12px;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+.control-row-inline input[type=range] {
+  width: 80px;
+  accent-color: var(--accent2);
+}
+
+/* ═══════════════════════════════════════════
+   TOP-RIGHT CONTROLS
+═══════════════════════════════════════════ */
+.top-right-controls {
+  position: absolute;
+  top: var(--bar-top);
+  right: var(--right-safe);
+  z-index: 101; /* one above feature-bar so it's never obscured */
+  display: flex;
+  gap: 8px;
+  pointer-events: all;
+  align-items: center;
+}
+
+.ctrl-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  background: rgba(13,13,26,0.8);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--border);
+  border-radius: 40px;
+  color: var(--text-dim);
+  font-family: 'Syne', sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+.ctrl-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.ctrl-icon { font-size: 13px; }
+
+/* ═══════════════════════════════════════════
+   SIDE PANEL (Page 1 left)
+═══════════════════════════════════════════ */
+.side-panel {
+  position: absolute;
+  top: var(--ui-top);
+  left: var(--left-safe);
+  width: var(--panel-w);
+  /* Bottom-clamp: leave room for telemetry (≈80px) + pip stack + gap */
+  max-height: calc(100% - var(--ui-top) - var(--pip-stack-h) - 90px);
+  overflow-y: auto;
+  z-index: 100;
+  background: rgba(13,13,26,0.85);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+  pointer-events: all;
+}
+
+.panel-title {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  margin-bottom: 10px;
+}
+
+.panel-divider {
+  height: 1px;
+  background: var(--border);
+  margin: 14px 0;
+}
+
+.shape-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
+.shape-btn {
+  padding: 8px 6px;
+  background: var(--glass);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-dim);
+  font-family: 'Syne', sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: center;
+  transition: all 0.2s;
+  line-height: 1.3;
+}
+.shape-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: rgba(168,85,247,0.1);
+}
+.shape-btn.active {
+  border-color: var(--accent);
+  background: rgba(168,85,247,0.2);
+  color: #fff;
+}
+
+.control-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+  gap: 8px;
+}
+.control-row label {
+  font-size: 12px;
+  color: var(--text-dim);
+  font-weight: 600;
+  white-space: nowrap;
+}
+.control-row input[type=color] {
+  width: 36px; height: 26px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: none;
+  cursor: pointer;
+  padding: 2px;
+}
+.control-row input[type=range] {
+  flex: 1;
+  accent-color: var(--accent);
+}
+
+/* ═══════════════════════════════════════════
+   TELEMETRY OVERLAY
+   Anchored just above the PIP, never below it.
+═══════════════════════════════════════════ */
+.telemetry {
+  position: absolute;
+  /* Sit directly above the PIP container */
+  bottom: calc(var(--pip-h) + 16px + 8px); /* pip-h + pip-bottom-gap + spacing */
+  left: var(--left-safe);
+  z-index: 100;
+  background: rgba(13,13,26,0.85);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+  min-width: 180px;
+  max-width: var(--panel-w); /* match side panel width so left column looks aligned */
+  pointer-events: none;
+}
+
+.tele-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+.tele-label {
+  font-size: 11px;
+  font-family: 'DM Mono', monospace;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+.tele-val {
+  font-size: 12px;
+  font-family: 'DM Mono', monospace;
+  color: var(--accent2);
+  font-weight: 400;
+}
+.tele-msg {
+  font-size: 11px;
+  font-family: 'DM Mono', monospace;
+  color: var(--accent3);
+  margin-top: 6px;
+  border-top: 1px solid var(--border);
+  padding-top: 6px;
+  line-height: 1.4;
+}
+.telemetry.danger { border-color: var(--danger); }
+.telemetry.danger .tele-msg { color: var(--danger); }
+
+/* ═══════════════════════════════════════════
+   WEBCAM PIP
+   Fixed bottom-left corner, clear of all other elements.
+═══════════════════════════════════════════ */
+.pip-container {
+  position: absolute;
+  bottom: 16px;
+  left: var(--left-safe);
+  width: var(--pip-w);
+  height: var(--pip-h);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  border: 1px solid var(--border-hi);
+  z-index: 100;
+}
+
+/* Video is just the source frame — hidden under canvas */
+.pip-container video {
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  object-fit: cover;
+  transform: scaleX(-1);
+  opacity: 0;
+  z-index: 1;
+}
+
+/* Canvas drawn on top of video */
+.pip-container canvas {
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  z-index: 2;
+}
+
+/* ═══════════════════════════════════════════
+   PAGE 2 — GESTURE REF + PALETTE
+═══════════════════════════════════════════ */
+.gesture-ref {
+  position: absolute;
+  top: var(--ui-top);
+  left: var(--left-safe);
+  width: 210px;
+  /* Bottom-clamp matching side-panel logic */
+  max-height: calc(100% - var(--ui-top) - var(--pip-stack-h) - 90px);
+  overflow-y: auto;
+  z-index: 100;
+  background: rgba(13,13,26,0.85);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px;
+  pointer-events: none;
+}
+.gesture-item {
+  font-size: 11px;
+  color: var(--text-dim);
+  padding: 4px 0;
+  border-bottom: 1px solid var(--border);
+  line-height: 1.5;
+}
+.gesture-item:last-child { border-bottom: none; }
+
+/* Object palette — centred modal */
+.object-palette {
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 200;
+  background: rgba(13,13,26,0.95);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius);
+  padding: 20px;
+  min-width: 280px;
+  pointer-events: all;
+  box-shadow: 0 0 40px rgba(168,85,247,0.3);
+}
+/* Animation applied via class so it only plays on show, not on every render */
+.object-palette.animating {
+  animation: palette-appear 0.3s cubic-bezier(0.34,1.56,0.64,1) forwards;
+}
+@keyframes palette-appear {
+  from { opacity: 0; transform: translate(-50%, -50%) scale(0.85); }
+  to   { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+}
+
+.palette-title {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 12px;
+  text-align: center;
+}
+.palette-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+.palette-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 12px 8px;
+  background: var(--glass);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all 0.2s;
+  color: var(--text-dim);
+  font-size: 11px;
+  font-weight: 600;
+}
+.palette-item:hover {
+  border-color: var(--accent2);
+  color: var(--accent2);
+  background: rgba(34,211,238,0.1);
+}
+.palette-icon { font-size: 22px; }
+
+/* ═══════════════════════════════════════════
+   TUTORIAL OVERLAY
+═══════════════════════════════════════════ */
+.tutorial-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  background: rgba(5,5,13,0.8);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.tutorial-overlay.hidden { display: none; }
+
+.tutorial-card {
+  position: relative;
+  background: rgba(13,13,26,0.98);
+  border: 1px solid var(--border-hi);
+  border-radius: 16px;
+  padding: 32px;
+  max-width: 420px;
+  width: 90%;
+  box-shadow: 0 0 60px rgba(168,85,247,0.15);
+}
+
+.tutorial-close {
+  position: absolute;
+  top: 14px; right: 14px;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  width: 28px; height: 28px;
+  color: var(--text-dim);
+  cursor: pointer;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+.tutorial-close:hover { border-color: var(--danger); color: var(--danger); }
+
+.tutorial-content { min-height: 180px; }
+
+.tut-step-title {
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--accent);
+  margin-bottom: 8px;
+}
+.tut-step-icon {
+  font-size: 48px;
+  margin-bottom: 12px;
+  display: block;
+}
+.tut-step-desc {
+  font-size: 14px;
+  color: var(--text-dim);
+  line-height: 1.7;
+}
+
+.tutorial-dots {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  margin: 20px 0 16px;
+}
+.tut-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--border-hi);
+  transition: background 0.2s;
+}
+.tut-dot.active { background: var(--accent); }
+
+.tutorial-nav {
+  display: flex;
+  justify-content: space-between;
+}
+.tut-nav-btn {
+  padding: 8px 20px;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  color: var(--text-dim);
+  font-family: 'Syne', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.tut-nav-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+/* ═══════════════════════════════════════════
+   HELP BUTTON + RECORDING INDICATOR
+   Help sits bottom-right, REC sits top-right
+   under the nav — no overlap.
+═══════════════════════════════════════════ */
+.help-btn {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: 1100; /* above rec indicator */
+  width: 36px; height: 36px;
+  border-radius: 50%;
+  background: rgba(13,13,26,0.9);
+  border: 1px solid var(--border-hi);
+  color: var(--text-dim);
+  font-family: 'Syne', sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.help-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+.rec-indicator {
+  position: fixed;
+  /* Directly below nav, top-right — does NOT overlap help btn */
+  top: calc(var(--nav-h) + 8px);
+  right: var(--right-safe);
+  z-index: 600;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  background: rgba(255,77,109,0.15);
+  border: 1px solid var(--danger);
+  border-radius: 20px;
+  color: var(--danger);
+  font-family: 'DM Mono', monospace;
+  font-size: 12px;
+  font-weight: 400;
+}
+.rec-indicator.hidden { display: none; }
+.rec-dot {
+  width: 7px; height: 7px;
+  background: var(--danger);
+  border-radius: 50%;
+  animation: blink 1s ease-in-out infinite;
+}
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.2; }
+}
+
+/* ═══════════════════════════════════════════
+   UTILITY
+═══════════════════════════════════════════ */
+.hidden { display: none !important; }
+
+/* Noise texture overlay for depth */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  pointer-events: none;
+  opacity: 0.025;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* ═══════════════════════════════════════════
+   RESPONSIVE — narrower viewports
+═══════════════════════════════════════════ */
+@media (max-width: 768px) {
+  :root {
+    --pip-w: 140px;
+    --pip-h: 105px;
+    --panel-w: 180px;
+  }
+
+  .nav-logo { font-size: 15px; }
+  .nav-btn  { padding: 5px 10px; font-size: 12px; }
+
+  .feature-bar {
+    /* On mobile collapse to just icon buttons if space is too tight */
+    max-width: calc(100% - 160px);
+    padding: 6px 10px;
+    gap: 4px;
+  }
+
+  .feat-btn { padding: 4px 8px; font-size: 11px; gap: 5px; }
+
+  .top-right-controls { gap: 4px; }
+  .ctrl-btn { padding: 5px 10px; font-size: 11px; }
+
+  .side-panel, .gesture-ref { width: var(--panel-w); }
+}
+
+@media (max-width: 480px) {
+  :root { --pip-w: 110px; --pip-h: 82px; }
+
+  .nav-links {
+    gap: 3px;
+  }
+  .nav-btn span:not(.nav-icon) {
+    /* Hide text labels, keep icon only */
+    display: none;
+  }
+  .nav-btn { padding: 6px 10px; }
+
+  .feature-bar { max-width: calc(100% - 120px); }
+}
