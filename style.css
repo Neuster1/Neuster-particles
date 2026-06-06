@@ -131,6 +131,7 @@ html, body {
 }
 .hand-dot.active   { background: var(--accent3); box-shadow: 0 0 8px var(--accent3); }
 .hand-dot.inactive { background: var(--danger); }
+.hand-dot.grace    { background: #f59e0b; box-shadow: 0 0 8px #f59e0b; animation: blink 0.5s ease-in-out infinite; }
 
 /* ═══════════════════════════════════════════
    PAGES
