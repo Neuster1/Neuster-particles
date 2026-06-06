@@ -7,7 +7,9 @@
 
 window.P3 = (() => {
 
-  const FINGER_TIPS = [4, 8, 12, 16, 20]; // thumb, index, middle, ring, pinky
+  // Landmark indices: thumb=4, index=8, middle=12, ring=16, pinky=20
+  const ALL_TIPS   = [4, 8, 12, 16, 20];
+  const INDEX_ONLY = [8]; // ☝️ pointing gesture → draw single trail
 
   const FINGER_COLORS = [
     '#a855f7', // thumb  — purple
@@ -20,10 +22,12 @@ window.P3 = (() => {
   const state = {
     canvas: null,
     ctx: null,
+    // 5 separate trail buffers
     trails: Array.from({ length: 5 }, () => []),
     trailLength: 50,
     glowIntensity: 8,
     handPresent: false,
+    activeFingers: [],   // which finger indices (0-4) are currently drawing
   };
 
   /* ─── CANVAS SETUP ──────────────────── */
@@ -49,8 +53,8 @@ window.P3 = (() => {
     const w   = state.canvas.width;
     const h   = state.canvas.height;
 
-    // Fade / trail persistence
-    ctx.fillStyle = 'rgba(0,0,0,0.12)';
+    // Fade persistence
+    ctx.fillStyle = 'rgba(0,0,0,0.10)';
     ctx.fillRect(0, 0, w, h);
 
     if (!state.handPresent) return;
@@ -63,43 +67,63 @@ window.P3 = (() => {
       const glow  = state.glowIntensity;
 
       ctx.save();
-      ctx.shadowBlur  = glow * 3;
+      ctx.shadowBlur  = glow * 4;
       ctx.shadowColor = color;
       ctx.lineCap     = 'round';
       ctx.lineJoin    = 'round';
 
-      for (let i = 1; i < trail.length; i++) {
-        const t     = i / trail.length;
-        const alpha = t * 0.9;
-        const width = t * (glow * 0.5);
+      // ── Smooth Catmull-Rom spline through trail points ──
+      ctx.beginPath();
+      ctx.moveTo(trail[0].x, trail[0].y);
 
-        ctx.beginPath();
-        ctx.moveTo(trail[i-1].x, trail[i-1].y);
-        ctx.lineTo(trail[i].x,   trail[i].y);
-        ctx.strokeStyle = hexToRgba(color, alpha);
-        ctx.lineWidth   = Math.max(1, width);
-        ctx.stroke();
+      if (trail.length === 2) {
+        ctx.lineTo(trail[1].x, trail[1].y);
+      } else {
+        // Catmull-Rom: draw bezier segments
+        for (let i = 0; i < trail.length - 1; i++) {
+          const p0 = trail[Math.max(i-1, 0)];
+          const p1 = trail[i];
+          const p2 = trail[i+1];
+          const p3 = trail[Math.min(i+2, trail.length-1)];
+
+          // Control points (tension = 0.5)
+          const cp1x = p1.x + (p2.x - p0.x) / 6;
+          const cp1y = p1.y + (p2.y - p0.y) / 6;
+          const cp2x = p2.x - (p3.x - p1.x) / 6;
+          const cp2y = p2.y - (p3.y - p1.y) / 6;
+
+          ctx.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, p2.x, p2.y);
+        }
       }
 
-      // Bright dot at fingertip
-      if (trail.length > 0) {
-        const tip = trail[trail.length - 1];
-        ctx.beginPath();
-        ctx.arc(tip.x, tip.y, glow * 0.4, 0, Math.PI * 2);
-        ctx.fillStyle = color;
-        ctx.fill();
-        // Inner white core
-        ctx.beginPath();
-        ctx.arc(tip.x, tip.y, glow * 0.15, 0, Math.PI * 2);
-        ctx.fillStyle = 'rgba(255,255,255,0.9)';
-        ctx.fill();
-      }
+      // Gradient stroke: fade old → bright at tip
+      const tipIdx = trail.length - 1;
+      const grad   = ctx.createLinearGradient(
+        trail[0].x, trail[0].y, trail[tipIdx].x, trail[tipIdx].y
+      );
+      grad.addColorStop(0, hexToRgba(color, 0));
+      grad.addColorStop(1, hexToRgba(color, 0.9));
+
+      ctx.strokeStyle = grad;
+      ctx.lineWidth   = Math.max(2, glow * 0.45);
+      ctx.stroke();
+
+      // Glowing dot at tip
+      const tip = trail[tipIdx];
+      ctx.beginPath();
+      ctx.arc(tip.x, tip.y, glow * 0.45, 0, Math.PI * 2);
+      ctx.fillStyle = color;
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(tip.x, tip.y, glow * 0.18, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(255,255,255,0.95)';
+      ctx.fill();
 
       ctx.restore();
 
-      // Particle burst at tip
-      if (trail.length > 0 && Math.random() < 0.4) {
-        spawnParticles(trail[trail.length - 1], color);
+      // Floating sparks — less frequent for perf
+      if (Math.random() < 0.25) {
+        spawnParticles(tip, color);
       }
     }
 
@@ -112,16 +136,16 @@ window.P3 = (() => {
   function spawnParticles(pos, color) {
     for (let i = 0; i < 2; i++) {
       floatingParticles.push({
-        x:     pos.x + (Math.random()-0.5)*6,
-        y:     pos.y + (Math.random()-0.5)*6,
-        vx:    (Math.random()-0.5)*2,
-        vy:    (Math.random()-0.5)*2 - 0.5,
-        life:  1.0,
+        x:    pos.x + (Math.random()-0.5)*8,
+        y:    pos.y + (Math.random()-0.5)*8,
+        vx:   (Math.random()-0.5)*2.5,
+        vy:   (Math.random()-0.5)*2.5 - 0.8,
+        life: 1.0,
         color,
-        size:  Math.random() * 3 + 1,
+        size: Math.random()*3 + 1,
       });
     }
-    if (floatingParticles.length > 800) floatingParticles.splice(0, 100);
+    if (floatingParticles.length > 600) floatingParticles.splice(0, 80);
   }
 
   function updateFloatingParticles(ctx) {
@@ -129,16 +153,15 @@ window.P3 = (() => {
       const p = floatingParticles[i];
       p.x    += p.vx;
       p.y    += p.vy;
-      p.vy   -= 0.04;
-      p.life -= 0.025;
+      p.vy   -= 0.05;
+      p.life -= 0.028;
       if (p.life <= 0) { floatingParticles.splice(i, 1); continue; }
-
       ctx.save();
       ctx.globalAlpha = p.life;
-      ctx.shadowBlur  = 6;
+      ctx.shadowBlur  = 5;
       ctx.shadowColor = p.color;
       ctx.beginPath();
-      ctx.arc(p.x, p.y, p.size * p.life, 0, Math.PI * 2);
+      ctx.arc(p.x, p.y, p.size * p.life, 0, Math.PI*2);
       ctx.fillStyle = p.color;
       ctx.fill();
       ctx.restore();
@@ -152,37 +175,84 @@ window.P3 = (() => {
     const lm = GestureUtils.getLandmarks(results, 0);
 
     if (!lm) {
-      state.handPresent = false;
-      state.trails.forEach(t => { if (t.length > 0) t.shift(); });
-      document.getElementById('tele-msg-p3').textContent = 'Raise your hand to paint';
+      state.handPresent    = false;
+      state.activeFingers  = [];
+      // Fade trails out gradually
+      state.trails.forEach(t => { if (t.length > 2) t.splice(0, 2); });
+      document.getElementById('tele-msg-p3').textContent = 'Point ☝️ or open hand ✋ to paint';
       return;
     }
 
     state.handPresent = true;
-    document.getElementById('tele-msg-p3').textContent = '🎨 Painting...';
 
     const w = state.canvas.width;
     const h = state.canvas.height;
 
-    FINGER_TIPS.forEach((tipIdx, f) => {
-      const tip = lm[tipIdx];
-      // Mirror the X axis to match the mirrored PIP view
-      const x = (1 - tip.x) * w;
-      const y = tip.y * h;
+    // ── Determine active fingers ──────────────────
+    // If pointing gesture (☝️): index only
+    // If open hand: all 5
+    // Otherwise: whichever fingers are extended
+    const pointing = GestureUtils.isPointing(lm);
+    const openHand = GestureUtils.isOpenHand(lm);
 
-      state.trails[f].push({ x, y });
+    let activeTips;
+    if (pointing) {
+      activeTips = [{ idx: 1, lmIdx: 8 }]; // index only
+      document.getElementById('tele-msg-p3').textContent = '☝️ Single trail';
+    } else if (openHand) {
+      activeTips = ALL_TIPS.map((lmIdx, f) => ({ idx: f, lmIdx }));
+      document.getElementById('tele-msg-p3').textContent = '🎨 Painting with 5 fingers...';
+    } else {
+      // Only extended fingers draw
+      activeTips = [];
+      const fingerDefs = [
+        { idx: 0, tip: 4,  pip: 2  },
+        { idx: 1, tip: 8,  pip: 6  },
+        { idx: 2, tip: 12, pip: 10 },
+        { idx: 3, tip: 16, pip: 14 },
+        { idx: 4, tip: 20, pip: 18 },
+      ];
+      fingerDefs.forEach(f => {
+        if (lm[f.tip].y < lm[f.pip].y) activeTips.push({ idx: f.idx, lmIdx: f.tip });
+      });
+      document.getElementById('tele-msg-p3').textContent =
+        activeTips.length > 0 ? `✏️ ${activeTips.length} finger${activeTips.length>1?'s':''}` : 'Show fingers to paint';
+    }
 
-      if (state.trails[f].length > state.trailLength) {
-        state.trails[f].shift();
+    state.activeFingers = activeTips.map(a => a.idx);
+
+    // ── Push positions into active trails ─────────
+    // Clear inactive finger trails smoothly (drain them)
+    for (let f = 0; f < 5; f++) {
+      if (!state.activeFingers.includes(f)) {
+        if (state.trails[f].length > 2) state.trails[f].splice(0, 3);
+        continue;
       }
+    }
+
+    activeTips.forEach(({ idx, lmIdx }) => {
+      const pt = lm[lmIdx];
+      const x  = (1 - pt.x) * w; // mirror
+      const y  = pt.y * h;
+
+      const trail = state.trails[idx];
+      // Only add if moved enough (reduces zigzag on stationary hand)
+      if (trail.length > 0) {
+        const last = trail[trail.length-1];
+        const d2   = (x-last.x)**2 + (y-last.y)**2;
+        if (d2 < 9) return; // less than 3px movement, skip
+      }
+
+      trail.push({ x, y });
+      if (trail.length > state.trailLength) trail.shift();
     });
   }
 
   /* ─── HELPERS ───────────────────────── */
   function hexToRgba(hex, alpha) {
-    const r = parseInt(hex.slice(1,3), 16);
-    const g = parseInt(hex.slice(3,5), 16);
-    const b = parseInt(hex.slice(5,7), 16);
+    const r = parseInt(hex.slice(1,3),16);
+    const g = parseInt(hex.slice(3,5),16);
+    const b = parseInt(hex.slice(5,7),16);
     return `rgba(${r},${g},${b},${alpha})`;
   }
 
@@ -197,11 +267,9 @@ window.P3 = (() => {
     document.getElementById('trail-length').addEventListener('input', e => {
       state.trailLength = +e.target.value;
     });
-
     document.getElementById('glow-intensity').addEventListener('input', e => {
       state.glowIntensity = +e.target.value;
     });
-
     document.getElementById('btn-clear-p3').addEventListener('click', clearCanvas);
   }
 
@@ -209,7 +277,6 @@ window.P3 = (() => {
   function init() {
     wireControls();
     initCanvas();
-    // Hand tracking started lazily by app.js via startTracking()
   }
 
   function startTracking() {
